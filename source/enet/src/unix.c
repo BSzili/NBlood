@@ -16,6 +16,16 @@
 #include <errno.h>
 #include <time.h>
 
+#if defined(__AROS__) || (defined(__AMIGA__) && !defined(__amigaos4__))
+#include <proto/exec.h>
+#ifdef __MORPHOS__
+#include <net/socketbasetags.h>
+#endif
+struct Library *SocketBase = NULL;
+#define ioctl(a,b,c) IoctlSocket((a),(b),(char *)(c))
+#define close CloseSocket
+#endif
+
 #define ENET_BUILDING_LIB 1
 #include "enet/enet.h"
 
@@ -40,6 +50,10 @@
 #endif
 #endif
 
+#ifdef __MORPHOS__
+#undef HAS_SOCKLEN_T
+#endif
+
 #ifdef HAS_FCNTL
 #include <fcntl.h>
 #endif
@@ -61,12 +75,32 @@ static enet_uint32 timeBase = 0;
 int
 enet_initialize (void)
 {
+#if defined(__AROS__) || (defined(__AMIGA__) && !defined(__amigaos4__))
+    SocketBase = OpenLibrary("bsdsocket.library", 0);
+    if (!SocketBase)
+        return -1;
+
+    if (SocketBaseTags(SBTM_SETVAL(SBTC_ERRNOPTR(sizeof(errno))), (IPTR)&errno, TAG_DONE))
+    {
+        CloseLibrary(SocketBase);
+        SocketBase = NULL;
+        return -1;
+    }
+#endif
+
     return 0;
 }
 
 void
 enet_deinitialize (void)
 {
+#if defined(__AROS__) || (defined(__AMIGA__) && !defined(__amigaos4__))
+    if (SocketBase)
+    {
+        CloseLibrary(SocketBase);
+        SocketBase = NULL;
+    }
+#endif
 }
 
 // Why, Xcode? Why?
@@ -121,6 +155,11 @@ enet_address_set_host (ENetAddress * address, const char * name)
     {
 #ifdef HAS_INET_PTON
         if (! inet_pton (AF_INET, name, & address -> host))
+#elif defined(__AROS__) || (defined(__AMIGA__) && !defined(__amigaos4__))
+        unsigned long host = inet_addr (name);
+        if (host != INADDR_NONE)
+            address -> host = host;
+        else
 #else
         if (! inet_aton (name, (struct in_addr *) & address -> host))
 #endif
@@ -392,7 +431,11 @@ enet_socket_send (ENetSocket socket,
         sin.sin_port = ENET_HOST_TO_NET_16 (address -> port);
         sin.sin_addr.s_addr = address -> host;
 
+#if defined(__AROS__) || defined(__MORPHOS__) || defined(__amigaos4__)
+        msgHdr.msg_name = (caddr_t)& sin;
+#else
         msgHdr.msg_name = & sin;
+#endif
         msgHdr.msg_namelen = sizeof (struct sockaddr_in);
     }
 
@@ -426,7 +469,11 @@ enet_socket_receive (ENetSocket socket,
 
     if (address != NULL)
     {
+#if defined(__AROS__) || defined(__MORPHOS__) || defined(__amigaos4__)
+        msgHdr.msg_name = (caddr_t)& sin;
+#else
         msgHdr.msg_name = & sin;
+#endif
         msgHdr.msg_namelen = sizeof (struct sockaddr_in);
     }
 

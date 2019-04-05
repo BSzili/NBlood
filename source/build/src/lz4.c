@@ -171,6 +171,9 @@
 /*-************************************
 *  Basic Types
 **************************************/
+#ifdef __AMIGA__
+#define BYTE LZ4BYTE
+#endif
 #if defined(__cplusplus) || (defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */)
 # include <stdint.h>
   typedef  uint8_t BYTE;

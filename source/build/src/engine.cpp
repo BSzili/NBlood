@@ -7617,7 +7617,7 @@ psky_t * tileSetupSky(int32_t const tilenum)
 // Exported Engine Functions
 //
 
-#if !defined _WIN32 && defined DEBUGGINGAIDS && !defined GEKKO
+#if !defined _WIN32 && defined DEBUGGINGAIDS && !defined GEKKO && !defined __AMIGA__
 #ifdef GEKKO
 #define __rtems__
 #define _POSIX_REALTIME_SIGNALS
@@ -7787,7 +7787,7 @@ int32_t engineInit(void)
 {
     int32_t i, j;
 
-#if !defined _WIN32 && defined DEBUGGINGAIDS && !defined GEKKO
+#if !defined _WIN32 && defined DEBUGGINGAIDS && !defined GEKKO && !defined __AMIGA__
     struct sigaction sigact, oldact;
     memset(&sigact, 0, sizeof(sigact));
     sigact.sa_sigaction = &sighandler;
@@ -9963,8 +9963,10 @@ static void videoAllocateBuffers(void)
         else
 # endif
         {
+#if !(defined(__amigaos4__) && SDL_MAJOR_VERSION == 1)
             softsurface_initialize({ xdim, ydim },
                                    { xres, yres });
+#endif
         }
     }
 #endif

@@ -51,7 +51,9 @@ void xalloc_set_location(int32_t line, const char *file, const char *func)
 void *handle_memerr(void *p)
 {
     UNREFERENCED_PARAMETER(p);
+#ifndef __AROS__
     debug_break();
+#endif
 
     if (g_MemErrHandler)
     {
@@ -571,6 +573,9 @@ char *Bstrupr(char *s)
 #ifdef _WIN32
 typedef BOOL (WINAPI *aGlobalMemoryStatusExType)(LPMEMORYSTATUSEX);
 #endif
+#if defined(__AROS__) || defined(__AMIGA__)
+#include <proto/exec.h>
+#endif
 
 uint32_t Bgetsysmemsize(void)
 {
@@ -616,6 +621,9 @@ uint32_t Bgetsysmemsize(void)
     //initprintf("Bgetsysmemsize(): %d pages of %d bytes, %d bytes of system memory\n",
     //		scphyspages, scpagesiz, siz);
 
+#endif
+#if defined(__AROS__) || defined(__AMIGA__)
+    siz = (uint32_t)AvailMem(MEMF_ANY/*|MEMF_LARGEST*/);
 #endif
 
     return siz;

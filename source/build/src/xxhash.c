@@ -139,6 +139,9 @@ static void* XXH_memcpy(void* dest, const void* src, size_t size) { return memcp
 /* *************************************
 *  Basic Types
 ***************************************/
+#ifdef __AMIGA__
+#define BYTE LZ4BYTE
+#endif
 #ifndef MEM_MODULE
 # if !defined (__VMS) \
   && (defined (__cplusplus) \

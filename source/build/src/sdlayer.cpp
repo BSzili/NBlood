@@ -303,7 +303,7 @@ void wm_setapptitle(const char *name)
 //
 
 /* XXX: libexecinfo could be used on systems without gnu libc. */
-#if !defined _WIN32 && defined __GNUC__ && !defined __OpenBSD__ && !(defined __APPLE__ && defined __BIG_ENDIAN__) && !defined GEKKO && !defined EDUKE32_TOUCH_DEVICES && !defined __OPENDINGUX__
+#if !defined _WIN32 && defined __GNUC__ && !defined __OpenBSD__ && !(defined __APPLE__ && defined __BIG_ENDIAN__) && !defined GEKKO && !defined EDUKE32_TOUCH_DEVICES && !defined __OPENDINGUX__ && !defined(__AROS__) && !defined(__AMIGA__)
 # define PRINTSTACKONSEGV 1
 # include <execinfo.h>
 #endif
@@ -1444,7 +1444,9 @@ int32_t setvideomode_sdlcommon(int32_t *x, int32_t *y, int32_t c, int32_t fs, in
     else
 #endif
     {
+#if !(defined(__amigaos4__) && SDL_MAJOR_VERSION == 1)
        softsurface_destroy();
+#endif
     }
 
     // clear last gamma/contrast/brightness so that it will be set anew
@@ -1690,7 +1692,12 @@ void videoBeginDrawing(void)
     }
 #endif
 
+#if defined(__amigaos4__) && SDL_MAJOR_VERSION == 1
+    if (SDL_MUSTLOCK(sdl_surface)) SDL_LockSurface(sdl_surface);
+    frameplace = (intptr_t)sdl_surface->pixels;
+#else
     frameplace = (intptr_t)softsurface_getBuffer();
+#endif
     if (modechange)
     {
         bytesperline = xdim;
@@ -1716,6 +1723,10 @@ void videoEndDrawing(void)
     if (!offscreenrendering) frameplace = 0;
     if (lockcount == 0) return;
     lockcount = 0;
+
+#if defined(__amigaos4__) && SDL_MAJOR_VERSION == 1
+    if (SDL_MUSTLOCK(sdl_surface)) SDL_UnlockSurface(sdl_surface);
+#endif
 }
 
 //
@@ -1804,10 +1815,14 @@ int32_t videoUpdatePalette(int32_t start, int32_t num)
 #endif
     {
         if (sdl_surface)
+#if defined(__amigaos4__) && SDL_MAJOR_VERSION == 1
+            SDL_SetColors(sdl_surface, (SDL_Color *)curpalettefaded, 0, 256);
+#else
             softsurface_setPalette(curpalettefaded,
                                    sdl_surface->format->Rmask,
                                    sdl_surface->format->Gmask,
                                    sdl_surface->format->Bmask);
+#endif
     }
 
     return 0;

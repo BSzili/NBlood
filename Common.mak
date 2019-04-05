@@ -172,6 +172,22 @@ ifeq ($(PLATFORM),WII)
     CCFULLPATH = $(DEVKITPPC)/bin/$(CC)
 endif
 
+ifeq ($(PLATFORM),AROS)
+    CROSS := i386-aros-
+endif
+
+ifeq ($(PLATFORM),AMIGA)
+    CROSS := m68k-amigaos-
+endif
+
+ifeq ($(PLATFORM),AMIGAOS4)
+    CROSS := ppc-amigaos-
+endif
+
+ifeq ($(PLATFORM),MORPHOS)
+    CROSS := ppc-morphos-
+endif
+
 CC := $(CROSS)gcc$(CROSS_SUFFIX)
 CXX := $(CROSS)g++$(CROSS_SUFFIX)
 
@@ -283,6 +299,14 @@ ifeq ($(PLATFORM),WINDOWS)
     endif
 else ifeq ($(PLATFORM),WII)
     IMPLICIT_ARCH := ppc
+else ifeq ($(PLATFORM),AROS)
+    IMPLICIT_ARCH := i386
+else ifeq ($(PLATFORM),AMIGA)
+    IMPLICIT_ARCH := m68k
+else ifeq ($(PLATFORM),AMIGAOS4)
+    IMPLICIT_ARCH := ppc
+else ifeq ($(PLATFORM),MORPHOS)
+    IMPLICIT_ARCH := ppc
 else
     ifneq ($(ARCH),)
         override ARCH := $(subst i486,i386,$(subst i586,i386,$(subst i686,i386,$(strip $(ARCH)))))
@@ -383,6 +407,39 @@ else ifeq ($(PLATFORM),$(filter $(PLATFORM),DINGOO GCW QNX SUNOS SYLLABLE))
     override NOASM := 1
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),BEOS SKYOS))
     override NOASM := 1
+else ifeq ($(PLATFORM),AROS)
+    override USE_OPENGL := 0
+    override HAVE_GTK2 := 0
+    override HAVE_FLAC := 0
+#    override HAVE_VORBIS := 0
+    override HAVE_XMP := 0
+    SDL_TARGET := 1
+    override NOASM := 1
+    override STARTUP_WINDOW := 0
+else ifeq ($(PLATFORM),AMIGA)
+    override USE_OPENGL := 0
+    override HAVE_GTK2 := 0
+    override HAVE_FLAC := 0
+    override HAVE_VORBIS := 0
+    override HAVE_XMP := 0
+    SDL_TARGET := 1
+    override STARTUP_WINDOW := 0
+else ifeq ($(PLATFORM),AMIGAOS4)
+    override USE_OPENGL := 0
+    override HAVE_GTK2 := 0
+    override HAVE_FLAC := 0
+#    override HAVE_VORBIS := 0
+    override HAVE_XMP := 0
+    SDL_TARGET := 1
+    override STARTUP_WINDOW := 0
+else ifeq ($(PLATFORM),MORPHOS)
+    override USE_OPENGL := 0
+    override HAVE_GTK2 := 0
+    override HAVE_FLAC := 0
+    override HAVE_VORBIS := 0
+    override HAVE_XMP := 0
+    SDL_TARGET := 1
+    override STARTUP_WINDOW := 0
 endif
 
 ifneq (i386,$(strip $(IMPLICIT_ARCH)))
@@ -398,6 +455,9 @@ ifeq ($(RELEASE),0)
     override STRIP :=
 endif
 ifneq ($(FORCEDEBUG),0)
+    override STRIP :=
+endif
+ifeq ($(PLATFORM),AROS)
     override STRIP :=
 endif
 
@@ -457,6 +517,9 @@ ifeq (0,$(CLANG))
             endif
         endif
     endif
+endif
+ifeq ($(PLATFORM),$(filter $(PLATFORM),AROS AMIGAOS4 MORPHOS AMIGA))
+    override LTO := 0
 endif
 
 
@@ -552,6 +615,14 @@ else ifeq ($(PLATFORM),$(filter $(PLATFORM),DINGOO GCW))
     COMPILERFLAGS += -D__OPENDINGUX__
 else ifeq ($(PLATFORM),SKYOS)
     COMPILERFLAGS += -DUNDERSCORES
+else ifeq ($(PLATFORM),AMIGA)
+    COMPILERFLAGS += -noixemul -fpermissive
+    LINKERFLAGS += -noixemul
+else ifeq ($(PLATFORM),AMIGAOS4)
+    COMPILERFLAGS += -DUINTPTR_MAX=ULONG_MAX -D__USE_INLINE__
+else ifeq ($(PLATFORM),MORPHOS)
+    COMPILERFLAGS += -noixemul -fpermissive
+    LINKERFLAGS += -noixemul
 endif
 ASFLAGS += -f $(ASFORMAT)
 
@@ -586,6 +657,9 @@ ifndef OPTOPT
     endif
     ifeq ($(PLATFORM),WII)
         OPTOPT := -mtune=750
+    endif
+    ifeq ($(PLATFORM),AMIGA)
+        OPTOPT := -m68060 -m68881
     endif
 endif
 
@@ -880,6 +954,21 @@ ifeq ($(RENDERTYPE),SDL)
     else ifeq ($(PLATFORM),SKYOS)
         COMPILERFLAGS += -I/boot/programs/sdk/include/sdl
         SDLCONFIG :=
+    else ifeq ($(PLATFORM),AROS)
+#        COMPILERFLAGS += -I/boot/programs/sdk/include/sdl
+#        SDLCONFIG := /Development/bin/sdl-config
+        SDLCONFIG :=
+    else ifeq ($(PLATFORM),AMIGA)
+        COMPILERFLAGS += -I/opt/amiga/m68k-amigaos/include/SDL
+        SDLCONFIG :=
+    else ifeq ($(PLATFORM),AMIGAOS4)
+        COMPILERFLAGS += -I/SDK/local/newlib/include/SDL
+        SDLCONFIG :=
+    else ifeq ($(PLATFORM),MORPHOS)
+#        COMPILERFLAGS += -I/gg/usr/local/include/SDL
+        COMPILERFLAGS += -I/gg/usr/local/include
+        SDLCONFIG :=
+        LIBS += -L/gg/usr/local/lib
     endif
 
     ifneq ($(strip $(SDLCONFIG)),)
@@ -959,13 +1048,21 @@ else ifeq ($(SUBPLATFORM),LINUX)
     LIBS += -lrt
 endif
 
-ifeq (,$(filter $(PLATFORM),WINDOWS WII))
+ifeq (,$(filter $(PLATFORM),WINDOWS WII AROS AMIGA AMIGAOS4 MORPHOS))
     ifneq ($(PLATFORM),BSD)
         LIBS += -ldl
     endif
     ifneq ($(PLATFORM),DARWIN)
         LIBS += -pthread
     endif
+endif
+
+ifeq ($(PLATFORM),AROS)
+    LIBS += -lvorbisfile -lvorbis -logg -lstdc++ -lgcc -lpthread
+endif
+
+ifeq ($(PLATFORM),AMIGAOS4)
+    LIBS += -lvorbisfile -lvorbis -logg -lmikmod -lFLAC -lmodplug -lsmpeg -lSDL -athread=native
 endif
 
 LIBS += -lm
